@@ -103,7 +103,7 @@ class Sintatico:
             if op == '+': self.codigo_objeto.append("SOMA")
             else: self.codigo_objeto.append("SUBT")
             
-            self.outros_termos() # Recursão
+            self.outros_termos()
 
     # <termo> -> <op_un> <fator> <mais_fatores>
     def termo(self):
@@ -199,8 +199,7 @@ class Sintatico:
             self.proximo_endereco += 1
             
             self.mais_par()
-        # FOLLOW de mais_par é ')' -> Lambda
-
+            
     # <corpo_f> -> <dc_loc> <comandos>
     def corpo_f(self):
         self.dc_loc()
@@ -208,19 +207,14 @@ class Sintatico:
 
     # <dc_loc> -> <dc_v> <mais_dcloc> | λ
     def dc_loc(self):
-        # FIRST de dc_loc é $ident
         if self.token_atual and self.token_atual[1] == 'IDENT':
             self.dc_v()
-            self.dc_loc() # Recursão para mais_dcloc
-        # FOLLOW de dc_loc são os comandos (echo, if, while...)
-
+            self.dc_loc() 
     # <comandos> -> <comando> <mais_comandos>
     def comandos(self):
-        # Enquanto o token atual estiver no FIRST de <comando>
         if self.token_atual and (self.token_atual[0] in ['echo', 'if', 'while'] or self.token_atual[1] == 'IDENT'):
             self.comando()
             self.comandos()
-        # FOLLOW de <comandos> = {'}', '?>'} -> Lambda
 
     def comando(self):
         token = self.token_atual[0]
@@ -232,20 +226,16 @@ class Sintatico:
             self.eat('.')
             self.eat('PHP_EOL')
             self.eat(';')
-            # Geração de código para imprimir
             if nome_var in self.tabela_simbolos:
                 self.codigo_objeto.append(f"CRVL {self.tabela_simbolos[nome_var]}")
                 self.codigo_objeto.append("IMPR")
             else: self.erro(f"Variável {nome_var} não declarada.")
 
         elif token == 'if':
-            self.parse_if() # Vamos detalhar abaixo
-
+            self.parse_if() 
         elif token == 'while':
-            self.parse_while() # Vamos detalhar abaixo
-
+            self.parse_while() 
         elif self.token_atual[1] == 'IDENT':
-            # Atribuição ou Chamada de Função: $ident <restoIdent> ;
             nome = self.token_atual[0]
             self.eat('IDENT')
             self.restoIdent(nome)
@@ -260,18 +250,15 @@ class Sintatico:
         
         self.eat(')')
         
-        # 1. Reserva espaço para o DSVF
         pos_dsvf = len(self.codigo_objeto)
-        self.codigo_objeto.append("") # Espaço para preencher
+        self.codigo_objeto.append("") 
 
         self.eat('{')
         self.comandos()
         self.eat('}')
         
-        # 2. Pulo de volta (DSVI) já sai com o número
         self.codigo_objeto.append(f"DSVI {inicio_while}")
         
-        # 3. BACKPATCHING: Preenche o DSVF com o número na mesma linha
         self.codigo_objeto[pos_dsvf] = f"DSVF {len(self.codigo_objeto)}"
 
     def condicao(self):
@@ -281,7 +268,6 @@ class Sintatico:
         self.eat('REL_OP')
         self.expressao()
         
-        # Gera o código da comparação
         dict_rel = {'==': 'CPIG', '!=': 'CPNE', '>=': 'CPMI', '<=': 'CMAI', '>': 'CPME', '<': 'CPMA'}
         self.codigo_objeto.append(dict_rel[op_rel])
     
@@ -292,7 +278,6 @@ class Sintatico:
             self.eat('{')
             self.comandos()
             self.eat('}')
-        # Se não for 'else', é lambda.
     
     def parse_if(self):
         self.eat('if')
@@ -300,7 +285,6 @@ class Sintatico:
         self.condicao()
         self.eat(')')
         
-        # 1. Reserva para o DSVF
         pos_dsvf = len(self.codigo_objeto)
         self.codigo_objeto.append("") 
         
@@ -308,16 +292,13 @@ class Sintatico:
         self.comandos()
         self.eat('}')
         
-        # 2. Reserva para o DSVI (pular o else)
         pos_dsvi_pular_else = len(self.codigo_objeto)
         self.codigo_objeto.append("")
         
-        # 3. Preenche o DSVF (vai para o início do else ou fim)
         self.codigo_objeto[pos_dsvf] = f"DSVF {len(self.codigo_objeto)}"
         
         self.pfalsa()
         
-        # 4. Preenche o DSVI (vai para depois do else)
         self.codigo_objeto[pos_dsvi_pular_else] = f"DSVI {len(self.codigo_objeto)}"
 
     def restoIdent(self, nome):
@@ -332,7 +313,6 @@ class Sintatico:
         else:
             self.lista_arg()
             if nome in self.tabela_simbolos:
-                # Chama a função pelo endereço guardado na tabela
                 self.codigo_objeto.append(f"CHAM {self.tabela_simbolos[nome]}")
             else:
                 self.erro(f"Função {nome} não declarada.")
@@ -363,4 +343,5 @@ class Sintatico:
             print(f"\n[SUCESSO] Código objeto salvo em: {nome}")
         except Exception as e:
             print(f"Erro ao salvar o arquivo: {e}")
+
             
